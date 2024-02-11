@@ -1,0 +1,68 @@
+<?php
+/*
+Plugin Name: Amazon Polly for WordPress
+Description: Enhance your WordPress blogs with Amazon Polly.
+Version: 1.0
+Author: Your Name
+License: GPL2
+*/
+
+// Include the AWS SDK for PHP library
+require_once plugin_dir_path( __FILE__ ) . 'aws/aws-autoloader.php';
+
+use Aws\Polly\PollyClient;
+use Aws\Exception\AwsException;
+
+// Function to synthesize text to speech using Amazon Polly
+function synthesize_text_to_speech( $text_to_speech ) {
+    // Create a PollyClient object
+    $polly_client = new PollyClient([
+        'version' => 'latest',
+        'region' => 'your-aws-region',
+        'credentials' => [
+            'key'    => 'your-aws-access-key',
+            'secret' => 'your-aws-secret-access-key',
+        ],
+    ]);
+
+    // Specify the parameters for the SynthesizeSpeech operation
+    $params = [
+        'Text' => $text_to_speech,
+        'OutputFormat' => 'mp3',
+        'VoiceId' => 'Salli', // Change the voice as per your preference
+    ];
+
+    try {
+        // Synthesize speech using Amazon Polly
+        $result = $polly_client->synthesizeSpeech($params);
+
+        // Save the synthesized speech as an MP3 file
+        $output_audio_file = 'path-to-save-audio-file/output.mp3';
+        file_put_contents($output_audio_file, $result['AudioStream']->getContents());
+
+        // Return the URL of the synthesized audio file
+        return $output_audio_file;
+    } catch (AwsException $e) {
+        // Output error message if any
+        error_log($e->getMessage());
+        return false;
+    }
+}
+
+// Function to display synthesized audio in WordPress posts
+function display_synthesized_audio( $content ) {
+    // Synthesize speech for the post content
+    $audio_url = synthesize_text_to_speech( $content );
+
+    // Embed the audio player in the post content
+    if ( $audio_url ) {
+        $audio_player = '<audio controls><source src="' . $audio_url . '" type="audio/mpeg"></audio>';
+        $content .= $audio_player;
+    }
+
+    return $content;
+}
+
+// Hook the display_synthesized_audio function to the_content filter
+add_filter( 'the_content', 'display_synthesized_audio' );
+?>
